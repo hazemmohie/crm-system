@@ -249,7 +249,8 @@ function ensureUserCodesAndCredentials(users: User[]) {
 }
 
 let cachedDB: LocalDB | null = null;
-let isFirestoreInitialized = false;
+let db: LocalDB = initialDB();
+let isDataInitialized = false;
 
 function sanitizeAndEnsureDB(loaded: any): LocalDB {
   if (!loaded.users) loaded.users = [];
@@ -1026,11 +1027,8 @@ function distributeCustomersEqually(db: LocalDB, options: { onlyUnassigned?: boo
   return { distributedCount, userCount: activeUsers.length };
 }
 
-// REST API Endpoints
 app.get('/api/health', (req, res) => {
-  const driveStatus = getDriveStatus();
-  const fsStatus = getFirestoreProtectionStatus();
-  const dbData = loadDB();
+  const driveStatus = getDriveStorageStatus();
   res.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
@@ -1040,15 +1038,12 @@ app.get('/api/health', (req, res) => {
         folderId: driveStatus.folderId,
         error: driveStatus.error
       },
-      firestore: {
-        connected: fsStatus.isInitialized,
-        safeReadOnly: fsStatus.isSafeReadOnlyMode
-      }
+      sourceOfTruth: 'Google Drive'
     },
     data: {
-      customers: dbData.customers?.length || 0,
-      users: dbData.users?.length || 0,
-      tasks: dbData.tasks?.length || 0
+      customers: db.customers?.length || 0,
+      users: db.users?.length || 0,
+      tasks: db.tasks?.length || 0
     }
   });
 });
@@ -1188,7 +1183,7 @@ app.post('/api/auth/register', (req, res) => {
     email: cleanEmail,
     username: cleanUsername,
     userCode: newUserCode,
-    password: cleanPassword,
+    password: hashPassword(cleanPassword),
     name: cleanName,
     phone: cleanPhone,
     role: 'user', // Always 'user' on self-registration — admin must promote manually

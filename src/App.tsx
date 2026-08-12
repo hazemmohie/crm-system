@@ -74,10 +74,32 @@ export default function App() {
     }
   };
 
+  const restoreSession = async (emailOrUsername: string) => {
+    try {
+      const res = await fetch('/api/users');
+      if (res.ok) {
+        const data = await res.json();
+        const users: User[] = data.users || [];
+        const cleanKey = emailOrUsername.trim().toLowerCase();
+        const found = users.find(u => 
+          (u.email && u.email.toLowerCase() === cleanKey) ||
+          (u.username && u.username.toLowerCase() === cleanKey)
+        );
+        if (found && found.status === 'approved') {
+          setCurrentUser(found);
+          await fetchData(found.email);
+          return;
+        }
+      }
+    } catch (e) {}
+    localStorage.removeItem('app_user_email');
+    await fetchData();
+  };
+
   useEffect(() => {
     const savedEmail = localStorage.getItem('app_user_email');
     if (savedEmail) {
-      handleLogin(savedEmail);
+      restoreSession(savedEmail);
     } else {
       fetchData();
     }
