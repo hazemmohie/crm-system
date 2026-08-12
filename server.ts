@@ -19,8 +19,7 @@ import {
   getTasks,
   saveTasks,
   getSettings,
-  saveSettings,
-  LocalDB
+  saveSettings
 } from './src/db/googleDriveStorageService.js';
 
 const app = express();
