@@ -88,18 +88,23 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
         }),
       });
 
-      const data = await res.json();
-      if (res.ok) {
-        setRegSuccessMessage(data.message || 'تم إرسال طلب الحساب بنجاح! حسابك بانتظار موافقة حازم محي (hazemmohie8@gmail.com).');
-        setRegName('');
-        setRegPhone('');
-        setRegUsername('');
-        setRegPassword('');
+      const ct = res.headers.get('content-type');
+      if (ct && ct.includes('application/json')) {
+        const data = await res.json();
+        if (res.ok) {
+          setRegSuccessMessage(data.message || 'تم إرسال طلب الحساب بنجاح! حسابك بانتظار موافقة حازم محي (hazemmohie8@gmail.com).');
+          setRegName('');
+          setRegPhone('');
+          setRegUsername('');
+          setRegPassword('');
+        } else {
+          setRegError(data.error || 'حدث خطأ أثناء إنشاء الحساب الجديد');
+        }
       } else {
-        setRegError(data.error || 'حدث خطأ أثناء إنشاء الحساب الجديد');
+        setRegError(`خطأ من السيرفر (${res.status}): يرجى التأكد من رفع التعديلات وإضافة GOOGLE_SERVICE_ACCOUNT_JSON في Vercel`);
       }
     } catch (err: any) {
-      setRegError('حدث خطأ بالاتصال بالسيرفر أثناء إنشاء الحساب');
+      setRegError('حدث خطأ بالاتصال بالسيرفر أثناء إنشاء الحساب. يرجى التأكد من تشغيل السيرفر والاتصال بالإنترنت.');
     } finally {
       setRegLoading(false);
     }
