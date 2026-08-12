@@ -1,59 +1,60 @@
 import express from 'express';
 import path from 'path';
 import fs from 'fs';
+import crypto from 'crypto';
 import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI } from '@google/genai';
 import { User, Customer, GoogleSheetConfig, CustomerStatus, Activity, AppTask, AppNotification, AiAgentPermissions, AiAgentPendingAction } from './src/types.js';
 import {
-  loadDataFromFirestore,
-  saveStateToFirestore,
-  loadUsersFromFirestore,
-  saveUsersToFirestore,
-  initializeFirestoreProtection,
-  checkDatabaseHealth,
-  saveSingleCustomerToFirestore,
-  deleteSingleCustomerFromFirestore,
-  saveSingleTaskToFirestore,
-  logAuditEventToFirestore,
-  createFirestoreBackup,
-  getFirestoreProtectionStatus
-} from './src/db/firestoreService.js';
-import {
-  initGoogleDrive,
-  readDbFromDrive,
-  writeDbToDrive,
-  readUsersFromDrive,
-  writeUsersToDrive,
-  createDriveBackup,
-  getDriveStatus
-} from './src/db/googleDriveService.js';
+  initGoogleDriveStorage,
+  getDriveStorageStatus,
+  getFullDatabase,
+  saveFullDatabase,
+  getUsers,
+  saveUsers,
+  getClients,
+  saveClients,
+  getActivities,
+  saveActivities,
+  getTasks,
+  saveTasks,
+  getSettings,
+  saveSettings,
+  LocalDB
+} from './src/db/googleDriveStorageService.js';
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
 app.use(express.json({ limit: '10mb' }));
 
-// File-based persistent storage
+// Secure password hashing helper (PBKDF2/SHA256)
+function hashPassword(password: string): string {
+  if (!password) return '';
+  if (password.startsWith('pbkdf2$')) return password;
+  const salt = 'crm_system_salt_2026';
+  const hash = crypto.pbkdf2Sync(password, salt, 1000, 32, 'sha256').toString('hex');
+  return `pbkdf2$${hash}`;
+}
+
+function verifyPassword(password: string, storedHash?: string): boolean {
+  if (!password || !storedHash) return false;
+  if (storedHash === password) return true; // Legacy fallback for plaintext migration
+  const hashed = hashPassword(password);
+  return hashed === storedHash;
+}
+
+// File-based fallback directory (temporary local cache only)
 const DATA_DIR = path.join(process.cwd(), 'data');
 const DB_FILE = path.join(DATA_DIR, 'db.json');
 const USERS_FILE = path.join(DATA_DIR, 'users.json');
 
-// Dedicated Users storage functions to guarantee permanent user retention across restarts/resets
 function saveUsersOnly(users: User[]) {
   try {
-    if (!fs.existsSync(DATA_DIR)) {
-      fs.mkdirSync(DATA_DIR, { recursive: true });
-    }
-    fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2), 'utf-8');
-    // Google Drive: Primary persistent storage (sync in background)
-    const driveStatus = getDriveStatus();
-    if (driveStatus.initialized) {
-      writeUsersToDrive(users).catch(e => console.error('Error in writeUsersToDrive background sync:', e));
-    }
-    // Firestore: Secondary backup
-    saveUsersToFirestore(users).catch(e => console.error('Error in saveUsersToFirestore background sync:', e));
+    ensureUserCodesAndCredentials(users);
+    saveUsers(users).catch(e => console.error('Error in saveUsers Google Drive sync:', e));
   } catch (err) {
-    console.error('Error saving users file:', err);
+    console.error('Error saving users:', err);
   }
 }
 
@@ -391,46 +392,59 @@ function loadDB(): LocalDB {
   return cachedDB;
 }
 
+async function syncAndLoadData(): Promise<LocalDB> {
+  const status = getDriveStorageStatus();
+  if (!status.initialized) {
+    await initGoogleDriveStorage();
+  }
+  const driveDb = await getFullDatabase();
+  if (driveDb) {
+    db = sanitizeAndEnsureDB(driveDb);
+    cachedDB = db;
+    isDataInitialized = true;
+    return db;
+  }
+  return db;
+}
+
+// Vercel Serverless & API initialization middleware
+app.use(async (req, res, next) => {
+  if (req.path.startsWith('/api')) {
+    try {
+      const status = getDriveStorageStatus();
+      if (!status.initialized || !isDataInitialized) {
+        await syncAndLoadData();
+      }
+    } catch (err) {
+      console.error('Error in API storage sync middleware:', err);
+    }
+  }
+  next();
+});
+
 async function saveDBAsync(data: LocalDB): Promise<boolean> {
   cachedDB = data;
   db = data;
 
-  // Save local cache (best effort - may fail on ephemeral filesystems)
+  const driveStatus = getDriveStorageStatus();
+  if (driveStatus.initialized) {
+    const success = await saveFullDatabase(data);
+    if (!success) {
+      console.error('❌ Google Drive Save Failed: Write operation failed.');
+      return false;
+    }
+    return true;
+  }
+
+  // Best effort local cache for local dev fallback
   try {
     if (!fs.existsSync(DATA_DIR)) {
       fs.mkdirSync(DATA_DIR, { recursive: true });
     }
     fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), 'utf-8');
-  } catch (e) {
-    console.error('Error saving local DB file (non-critical):', e);
-  }
+  } catch (e) {}
 
-  // Always keep isolated permanent users file up to date
-  saveUsersOnly(data.users);
-
-  // ========================
-  // PRIMARY STORAGE: Google Drive (must await and verify before confirming save)
-  // ========================
-  const driveStatus = getDriveStatus();
-  let driveSaveSuccess = true;
-  if (driveStatus.initialized) {
-    driveSaveSuccess = await writeDbToDrive(data);
-    if (!driveSaveSuccess) {
-      console.error('❌ Primary Storage Save Failed: Google Drive write failed.');
-      return false;
-    }
-  }
-
-  // ========================
-  // SECONDARY BACKUP: Firestore (write if initialized and safe)
-  // ========================
-  const status = getFirestoreProtectionStatus();
-  if (status.isInitialized && !status.isSafeReadOnlyMode) {
-    await saveStateToFirestore(data).catch(e => {
-      console.error('Firestore save failed (non-critical, Drive has the data):', e);
-    });
-  }
-  return driveSaveSuccess;
+  return true;
 }
 
 function saveDB(data: LocalDB) {
@@ -676,8 +690,8 @@ function logActivity(
   return newActivity;
 }
 
-// Global in-memory DB backed by file
-let db = loadDB();
+// Global in-memory DB backed by Google Drive
+// db is initialized from initialDB() and synced via syncAndLoadData()
 
 // Helper to check if a customer is PERMANENTLY LOCKED to their current employee
 // Rule: Customers who responded (interested/agreed/completed) OR rejected (not_interested) are locked permanently to their employee.
@@ -1080,8 +1094,9 @@ app.post('/api/auth/set-password', (req, res) => {
 });
 
 // Login account by Username or Email + Password
-app.post('/api/auth/login', (req, res) => {
-  const { email, username, usernameOrEmail, password, name } = req.body || {};
+app.post('/api/auth/login', async (req, res) => {
+  await syncAndLoadData();
+  const { email, username, usernameOrEmail, password } = req.body || {};
   
   const query = (usernameOrEmail || username || email || '').trim().toLowerCase();
   const inputPass = (password || '').trim();
@@ -1090,68 +1105,45 @@ app.post('/api/auth/login', (req, res) => {
     return res.status(400).json({ error: 'يرجى إدخال اسم المستخدم أو البريد الإلكتروني' });
   }
 
+  if (!inputPass) {
+    return res.status(400).json({ error: 'يرجى إدخال كلمة المرور' });
+  }
+
   ensureUserCodesAndCredentials(db.users);
 
   // Match by username, email, or userCode
-  let user = db.users.find(u => 
+  const user = db.users.find(u => 
     (u.username && u.username.toLowerCase() === query) ||
     (u.email && u.email.toLowerCase() === query) ||
     (u.userCode && u.userCode.toLowerCase() === query)
   );
 
-  // Auto-login fallback for main admin if not found in db yet
   if (!user) {
-    const isAdminQuery = query === DEFAULT_ADMIN_EMAIL.toLowerCase() || query === 'admin' || query === 'hazem';
-
-    if (isAdminQuery) {
-      // Check if admin already exists to avoid duplicate creation
-      const existingAdmin = db.users.find(u => u.email.toLowerCase() === DEFAULT_ADMIN_EMAIL.toLowerCase());
-      if (existingAdmin) {
-        user = existingAdmin;
-      } else {
-        user = {
-          id: 'admin-1',
-          email: DEFAULT_ADMIN_EMAIL,
-          username: 'admin',
-          userCode: 'EMP-001',
-          password: inputPass || DEFAULT_ADMIN_PASSWORD,
-          name: 'حازم محي (المسؤول)',
-          role: 'admin',
-          status: 'approved',
-          createdAt: new Date().toISOString(),
-          agreedToTerms: true,
-          agreedAt: new Date().toISOString()
-        };
-        db.users.push(user);
-      }
-    } else {
-      return res.status(401).json({ 
-        error: 'بيانات الدخول غير صحيحة. يرجى التأكد من اسم المستخدم/البريد وكلمة المرور المسجلة مسبقاً لدى مسؤول النظام.' 
-      });
-    }
+    return res.status(401).json({ 
+      error: 'بيانات الدخول غير صحيحة. يرجى التأكد من اسم المستخدم/البريد وكلمة المرور المسجلة مسبقاً لدى مسؤول النظام.' 
+    });
   }
 
-  // Validate password if user has a password set
-  if (user.password && inputPass) {
-    const isMasterPass = inputPass === 'hazem2026' || inputPass === 'admin' || inputPass === '123456' || inputPass === '123';
-    if (user.password !== inputPass && !isMasterPass) {
-      return res.status(401).json({ error: 'كلمة المرور غير صحيحة. يرجى إعادة المحاولة.' });
-    }
+  const isValidPass = verifyPassword(inputPass, user.password);
+  if (!isValidPass) {
+    return res.status(401).json({ error: 'كلمة المرور غير صحيحة. يرجى إعادة المحاولة.' });
   }
 
   if (user.status === 'pending') {
     return res.status(403).json({ 
-      error: `حسابك (اسم المستخدم: ${user.username || user.name}) قيد المراجعة والانتظار لموافقة مالك النظام الأصلي (حازم محي - hazemmohie8@gmail.com). يرجى التواصل معه للاعتماد وتفعيل الحساب.` 
+      error: `حسابك (اسم المستخدم: ${user.username || user.name}) قيد المراجعة والانتظار لموافقة مالك النظام الأصلي (حازم محي). يرجى التواصل معه للاعتماد وتفعيل الحساب.` 
     });
   }
 
   if (user.status === 'suspended' || user.status === 'rejected') {
-    return res.status(403).json({ error: 'هذا الحساب غير معتمد أو تم تعطيله بواسطة مالك النظام (حازم محي).' });
+    return res.status(403).json({ error: 'هذا الحساب غير معتمد أو تم تعطيله بواسطة مالك النظام.' });
   }
 
-  saveDB(db);
+  // Save if password hash was generated/upgraded
+  await saveDBAsync(db);
 
-  res.json({ user, message: 'تم تسجيل الدخول بنجاح' });
+  const { password: _pwd, ...safeUser } = user;
+  res.json({ user: safeUser, message: 'تم تسجيل الدخول بنجاح' });
 });
 
 // Register New Account endpoint (Pending Approval by Hazem Mohie)
@@ -3271,137 +3263,25 @@ app.use('/api/*', (req, res) => {
 
 // Vite middleware & Production static serving
 async function startServer() {
-  console.log('🚀 Booting Server with Google Drive Primary Storage + Firestore Backup Protection...');
-
-  // ====================================================================
-  // STEP 1: Initialize Google Drive (Primary Persistent Storage)
-  // This is the most important step - if Drive loads, we have all data
-  // ====================================================================
-  let driveData: LocalDB | null = null;
-  let driveUsers: User[] | null = null;
+  console.log('🚀 Booting Server with Google Drive as Single Source of Truth...');
 
   try {
-    const driveOk = await initGoogleDrive();
-    if (driveOk) {
-      console.log('☁️ Google Drive initialized successfully. Loading production data...');
-
-      // Load main database from Drive
-      const rawDriveData = await readDbFromDrive();
-      if (rawDriveData) {
-        driveData = rawDriveData as LocalDB;
-        console.log(`✅ Google Drive: Loaded db.json (${driveData.customers?.length || 0} customers, ${driveData.users?.length || 0} users)`);
-      } else {
-        console.log('ℹ️ Google Drive: db.json not found (first boot or empty Drive)');
-      }
-
-      // Load users from Drive
-      const rawDriveUsers = await readUsersFromDrive();
-      if (rawDriveUsers) {
-        driveUsers = rawDriveUsers as User[];
-        console.log(`✅ Google Drive: Loaded users.json (${driveUsers.length} user accounts)`);
-      }
-    } else {
-      console.warn('⚠️ Google Drive not available. Will fall back to Firestore + local files.');
-    }
+    await syncAndLoadData();
+    console.log(`🎯 SOURCE OF TRUTH: Google Drive → ${db.customers.length} customers, ${db.users.length} users loaded.`);
   } catch (err) {
-    console.error('⚠️ Google Drive startup error (non-fatal, will use fallbacks):', err);
+    console.error('⚠️ Startup error loading Google Drive storage:', err);
   }
 
-  // ====================================================================
-  // STEP 2: Initialize Firestore Protection (Secondary Backup)
-  // ====================================================================
-  let firestoreData: LocalDB | null = null;
-  let firestoreUsers: User[] | null = null;
-
-  try {
-    const protectionInit = await initializeFirestoreProtection();
-    if (protectionInit.success && protectionInit.data) {
-      firestoreData = protectionInit.data as any as LocalDB;
-      firestoreUsers = protectionInit.users || [];
-      console.log(`✅ Firestore backup loaded (${firestoreData.customers?.length || 0} customers)`);
-    } else if (!protectionInit.success) {
-      console.warn('⚠️ Firestore Cold Start Read Failed or in Safe Mode.');
-    }
-  } catch (err) {
-    console.error('⚠️ Firestore init error (non-fatal):', err);
-  }
-
-  // ====================================================================
-  // STEP 3: Merge data - Drive is PRIMARY, Firestore is secondary fallback
-  // ====================================================================
-  try {
-    const localUsers = loadUsersOnly();
-    const localDbData = loadDB();
-
-    // Determine best data source: Drive > Firestore > Local
-    const bestData = driveData || firestoreData || localDbData;
-    const allUserSources: User[][] = [
-      driveUsers || [],
-      driveData?.users || [],
-      firestoreUsers || [],
-      firestoreData?.users || [],
-      localUsers,
-      localDbData.users || []
-    ];
-
-    const mergedUserAccounts = mergeUsers(allUserSources);
-    cachedDB = sanitizeAndEnsureDB({ ...bestData, users: mergedUserAccounts });
-    db = cachedDB;
-
-    // Log source used
-    if (driveData) {
-      console.log(`🎯 PRIMARY SOURCE: Google Drive → ${db.customers.length} customers, ${db.users.length} users loaded.`);
-    } else if (firestoreData) {
-      console.log(`🎯 FALLBACK SOURCE: Firestore → ${db.customers.length} customers, ${db.users.length} users loaded.`);
-    } else {
-      console.log(`🎯 FALLBACK SOURCE: Local files → ${db.customers.length} customers, ${db.users.length} users loaded.`);
-    }
-
-    // Save cache copies
-    try {
-      if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
-      fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2), 'utf-8');
-    } catch (e) {
-      console.error('Error writing DB_FILE cache (non-critical):', e);
-    }
-
-    // If Google Drive was available but had no data (first boot), sync current data to Drive
-    const driveStatus = getDriveStatus();
-    if (driveStatus.initialized && !driveData && (db.customers.length > 0 || db.users.length > 0)) {
-      console.log('📤 First Drive sync: uploading existing data to Google Drive...');
-      await writeDbToDrive(db).catch(e => console.error('First Drive sync failed:', e));
-      await writeUsersToDrive(db.users).catch(e => console.error('First Drive users sync failed:', e));
-    }
-
-    // If Firestore was initialized but has no data, sync to it too
-    const fsStatus = getFirestoreProtectionStatus();
-    if (fsStatus.isInitialized && !fsStatus.isSafeReadOnlyMode && !firestoreData && (db.customers.length > 0 || db.users.length > 0)) {
-      await saveStateToFirestore(db).catch(e => console.error('First Firestore sync failed:', e));
-    }
-
-  } catch (err) {
-    console.error('⚠️ Critical error during server cold start merge:', err);
-    // Emergency fallback: try to load anything
-    try {
-      const localDbData = loadDB();
-      cachedDB = sanitizeAndEnsureDB(localDbData);
-      db = cachedDB;
-    } catch (e2) {
-      console.error('Emergency fallback also failed:', e2);
-    }
-  }
-
-  // Run SLA auto-reassignment rules check on startup and set periodic 60-second background ticker
   processAutoReassignmentRules(db);
   setInterval(() => {
     try {
       processAutoReassignmentRules(db);
     } catch (e) {
-      console.error('Error running background processAutoReassignmentRules interval:', e);
+      console.error('Error running background SLA rules:', e);
     }
   }, 60 * 1000);
 
-  if (process.env.NODE_ENV !== 'production') {
+  if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: 'spa',
@@ -3409,15 +3289,25 @@ async function startServer() {
     app.use(vite.middlewares);
   } else {
     const distPath = path.join(process.cwd(), 'dist');
-    app.use(express.static(distPath));
-    app.get('*', (req, res) => {
-      res.sendFile(path.join(distPath, 'index.html'));
-    });
+    if (fs.existsSync(distPath)) {
+      app.use(express.static(distPath));
+      app.get('*', (req, res) => {
+        if (!req.path.startsWith('/api')) {
+          res.sendFile(path.join(distPath, 'index.html'));
+        }
+      });
+    }
   }
 
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server running on http://0.0.0.0:${PORT}`);
-  });
+  if (!process.env.VERCEL) {
+    app.listen(PORT, () => {
+      console.log(`Server running on http://0.0.0.0:${PORT}`);
+    });
+  }
 }
 
-startServer();
+if (!process.env.VERCEL) {
+  startServer();
+}
+
+export default app;
