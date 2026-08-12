@@ -393,16 +393,25 @@ function loadDB(): LocalDB {
 }
 
 async function syncAndLoadData(): Promise<LocalDB> {
-  const status = getDriveStorageStatus();
-  if (!status.initialized) {
-    await initGoogleDriveStorage();
+  try {
+    const status = getDriveStorageStatus();
+    if (!status.initialized) {
+      await initGoogleDriveStorage();
+    }
+    const driveDb = await getFullDatabase();
+    if (driveDb) {
+      db = sanitizeAndEnsureDB(driveDb);
+      cachedDB = db;
+      isDataInitialized = true;
+      return db;
+    }
+  } catch (err) {
+    console.warn('⚠️ Google Drive Sync Warning:', (err as any)?.message);
   }
-  const driveDb = await getFullDatabase();
-  if (driveDb) {
-    db = sanitizeAndEnsureDB(driveDb);
-    cachedDB = db;
+
+  if (!isDataInitialized) {
+    db = loadDB();
     isDataInitialized = true;
-    return db;
   }
   return db;
 }
@@ -426,14 +435,16 @@ async function saveDBAsync(data: LocalDB): Promise<boolean> {
   cachedDB = data;
   db = data;
 
-  const driveStatus = getDriveStorageStatus();
-  if (driveStatus.initialized) {
-    const success = await saveFullDatabase(data);
-    if (!success) {
-      console.error('❌ Google Drive Save Failed: Write operation failed.');
-      return false;
+  try {
+    const driveStatus = getDriveStorageStatus();
+    if (driveStatus.initialized) {
+      const success = await saveFullDatabase(data);
+      if (!success) {
+        console.warn('⚠️ Google Drive save returned false, keeping updated state in memory.');
+      }
     }
-    return true;
+  } catch (err) {
+    console.warn('⚠️ Google Drive save exception:', (err as any)?.message);
   }
 
   // Best effort local cache for local dev fallback
