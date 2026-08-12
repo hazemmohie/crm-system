@@ -55,10 +55,20 @@ export async function initGoogleDriveStorage(): Promise<boolean> {
     // Priority 1: Environment variable GOOGLE_SERVICE_ACCOUNT_JSON (Production / Vercel)
     if (process.env.GOOGLE_SERVICE_ACCOUNT_JSON) {
       try {
-        credentials = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
+        let rawEnv = process.env.GOOGLE_SERVICE_ACCOUNT_JSON.trim();
+        if ((rawEnv.startsWith("'") && rawEnv.endsWith("'")) || (rawEnv.startsWith('"') && rawEnv.endsWith('"'))) {
+          rawEnv = rawEnv.slice(1, -1);
+        }
+        credentials = JSON.parse(rawEnv);
         console.log('✅ GoogleDriveStorage: Loaded credentials from GOOGLE_SERVICE_ACCOUNT_JSON env var.');
-      } catch (e) {
-        console.error('❌ GoogleDriveStorage: Failed to parse GOOGLE_SERVICE_ACCOUNT_JSON env var.');
+      } catch (e1) {
+        try {
+          const sanitized = process.env.GOOGLE_SERVICE_ACCOUNT_JSON.replace(/[\r\n]+/g, '\\n');
+          credentials = JSON.parse(sanitized);
+          console.log('✅ GoogleDriveStorage: Loaded credentials using sanitized newline fallback.');
+        } catch (e2) {
+          console.error('❌ GoogleDriveStorage: Failed to parse GOOGLE_SERVICE_ACCOUNT_JSON env var:', (e2 as any)?.message);
+        }
       }
     }
 
