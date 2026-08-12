@@ -1,0 +1,20 @@
+{
+  "collections": [
+    {
+      "name": "users",
+      "description": "Registered system users and administrators"
+    },
+    {
+      "name": "customers",
+      "description": "Leads, properties, owners, and client database"
+    },
+    {
+      "name": "sheetConfig",
+      "description": "Google Sheet synchronization configuration"
+    },
+    {
+      "name": "activities",
+      "description": "System activity logs and customer interaction history"
+    }
+  ]
+}

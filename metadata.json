@@ -1,0 +1,6 @@
+{
+  "name": "توزيع أرقام العملاء",
+  "description": "تطبيق عربي بسيط لتوزيع أرقام العملاء بالتساوي على الموظفين المعتمدين بعد موافقة المسؤول مع إمكانية الربط بـ Google Sheets ومتابعة الملاحظات.",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
