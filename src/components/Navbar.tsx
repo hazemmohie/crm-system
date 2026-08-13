@@ -126,14 +126,14 @@ export const Navbar: React.FC<NavbarProps> = ({
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         {/* Brand & Title */}
         <div className="flex items-center space-x-3 space-x-reverse">
-          <div className="p-2 bg-[#8c622b]/10 border border-[#8c622b]/20 rounded-xl text-[#8c622b] shadow-sm">
-            <Building2 className="w-5 h-5" />
+          <div className="p-2.5 bg-gradient-to-br from-[#8c622b] to-[#5c3e18] text-white rounded-xl shadow-md border border-[#a8783b] flex items-center justify-center">
+            <Building2 className="w-5 h-5 text-amber-100" />
           </div>
           <div>
-            <h1 className="text-base font-bold tracking-tight text-[#2c2824] flex items-center gap-2">
-              <span>منظومة إدارة العملاء والعقارات</span>
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#e8e0d0] text-[#704d1f] font-bold border border-[#d8ccb8]">
-                الإصدار الكلاسيكي
+            <h1 className="text-base font-extrabold tracking-tight text-[#2c2824] flex items-center gap-2">
+              <span className="font-serif tracking-wide text-[#5c3e18]">DeepRoots CRM Real Estate</span>
+              <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-[#8c622b]/15 text-[#704d1f] font-bold border border-[#8c622b]/30">
+                منظومة العقارات
               </span>
             </h1>
             <p className="text-[11px] text-[#6e685f] font-medium">

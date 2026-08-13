@@ -165,13 +165,15 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
         
         {/* Header Branding */}
         <div className="text-center space-y-3">
-          <div className="inline-flex p-3.5 bg-[#8c622b]/10 border border-[#8c622b]/20 rounded-2xl text-[#8c622b] shadow-sm">
-            <Building2 className="w-8 h-8" />
+          <div className="inline-flex p-4 bg-gradient-to-br from-[#8c622b] to-[#5c3e18] text-white border border-[#a8783b] rounded-2xl shadow-lg ring-4 ring-[#8c622b]/15">
+            <Building2 className="w-9 h-9 text-amber-100" />
           </div>
           <div>
-            <h1 className="text-xl font-extrabold tracking-tight text-[#2c2824]">نظام إدارة وتتبع المبيعات العقارية</h1>
+            <h1 className="text-2xl font-extrabold tracking-tight text-[#2c2824] font-serif">
+              DeepRoots CRM Real Estate
+            </h1>
             <p className="text-[#6e685f] text-xs leading-relaxed font-medium mt-1">
-              منصة التسجيل وإدارة طلبات ومعروض العقارات الذكية
+              منظومة إدارة وتتبع المبيعات والطلبات العقارية الذكية
             </p>
           </div>
         </div>
