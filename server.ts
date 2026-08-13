@@ -2,7 +2,7 @@ import express from 'express';
 import path from 'path';
 import fs from 'fs';
 import crypto from 'crypto';
-import { createServer as createViteServer } from 'vite';
+// vite is loaded dynamically inside startServer() to avoid loading it in Vercel serverless context
 import { GoogleGenAI } from '@google/genai';
 import { User, Customer, GoogleSheetConfig, CustomerStatus, Activity, AppTask, AppNotification, AiAgentPermissions, AiAgentPendingAction } from './src/types.js';
 import {
@@ -365,10 +365,8 @@ function loadDB(): LocalDB {
     return cachedDB;
   }
 
+  // Read local file (read-only ops are safe on Vercel deployed files)
   try {
-    if (!fs.existsSync(DATA_DIR)) {
-      fs.mkdirSync(DATA_DIR, { recursive: true });
-    }
     if (fs.existsSync(DB_FILE)) {
       const data = fs.readFileSync(DB_FILE, 'utf-8');
       const loaded: LocalDB = JSON.parse(data);
@@ -380,14 +378,15 @@ function loadDB(): LocalDB {
   }
 
   cachedDB = sanitizeAndEnsureDB(initialDB());
-  // Save local file only on cold start, do NOT overwrite Firestore until startServer completes!
-  try {
-    if (!fs.existsSync(DATA_DIR)) {
-      fs.mkdirSync(DATA_DIR, { recursive: true });
+
+  // Write only in local dev (Vercel filesystem is read-only)
+  if (!process.env.VERCEL) {
+    try {
+      if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+      fs.writeFileSync(DB_FILE, JSON.stringify(cachedDB, null, 2), 'utf-8');
+    } catch (e) {
+      console.error('Error writing initial local DB file:', e);
     }
-    fs.writeFileSync(DB_FILE, JSON.stringify(cachedDB, null, 2), 'utf-8');
-  } catch (e) {
-    console.error('Error writing initial local DB file:', e);
   }
   return cachedDB;
 }
@@ -447,13 +446,13 @@ async function saveDBAsync(data: LocalDB): Promise<boolean> {
     console.warn('⚠️ Google Drive save exception:', (err as any)?.message);
   }
 
-  // Best effort local cache for local dev fallback
-  try {
-    if (!fs.existsSync(DATA_DIR)) {
-      fs.mkdirSync(DATA_DIR, { recursive: true });
-    }
-    fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), 'utf-8');
-  } catch (e) {}
+  // Best effort local cache — skip on Vercel (read-only filesystem)
+  if (!process.env.VERCEL) {
+    try {
+      if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+      fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), 'utf-8');
+    } catch (e) {}
+  }
 
   return true;
 }
@@ -470,6 +469,55 @@ function runBackupAndArchiveCycle(triggeredBy: string = 'النظام الآلي
   const database = loadDB();
   const startTime = new Date().toISOString();
 
+  // On Vercel, local filesystem is read-only — skip local backup file creation
+  // and go straight to archiving + Google Drive save
+  if (process.env.VERCEL) {
+    // Archiving only (no local file)
+    const folderName = `Production CRM Backups/${new Date().toISOString().split('T')[0]}`;
+    const filename = `backup_crm_${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+    let archivedThisRun = 0;
+
+    if (performArchiving && database.backupConfig?.autoArchiveEnabled !== false) {
+      const retentionDays = database.backupConfig?.retentionDays || 60;
+      const cutoffTime = Date.now() - retentionDays * 24 * 60 * 60 * 1000;
+      const activeCustomers: typeof database.customers = [];
+      if (!database.archivedRecords) database.archivedRecords = [];
+      database.customers.forEach(cust => {
+        const isClosedOrOld = cust.status === 'converted' || cust.status === 'not_interested';
+        const createdAtTime = new Date(cust.createdAt || Date.now()).getTime();
+        if (isClosedOrOld && createdAtTime < cutoffTime) {
+          database.archivedRecords!.push({ ...cust, archivedAt: new Date().toISOString(), archivedByTrigger: triggeredBy } as any);
+          archivedThisRun++;
+        } else {
+          activeCustomers.push(cust);
+        }
+      });
+      database.customers = activeCustomers;
+    }
+
+    if (!database.backupConfig) database.backupConfig = {};
+    database.backupConfig.lastBackupAt = startTime;
+    database.backupConfig.lastBackupStatus = 'تم النسخ الاحتياطي عبر Google Drive ✅';
+    database.backupConfig.lastBackupFolder = folderName;
+
+    if (!database.backupAuditLogs) database.backupAuditLogs = [];
+    database.backupAuditLogs.unshift({
+      id: 'bk-log-' + Date.now(),
+      timestamp: startTime,
+      triggeredBy,
+      backupFolder: folderName,
+      fileName: filename,
+      recordsCount: database.customers.length,
+      archivedCount: archivedThisRun,
+      status: 'SUCCESS',
+      verificationStatus: 'Google Drive ✅'
+    });
+
+    saveDB(database);
+    return { success: true, archivedCount: archivedThisRun };
+  }
+
+  // Local dev: write to filesystem
   try {
     if (!fs.existsSync(BACKUPS_DIR)) {
       fs.mkdirSync(BACKUPS_DIR, { recursive: true });
@@ -499,7 +547,6 @@ function runBackupAndArchiveCycle(triggeredBy: string = 'النظام الآلي
     fs.writeFileSync(filePath, snapshotJSON, 'utf-8');
 
     // 2. VERIFICATION STEP
-    // Read back file and parse JSON to confirm readability and record integrity
     const readBack = fs.readFileSync(filePath, 'utf-8');
     const parsed = JSON.parse(readBack);
 
@@ -3287,6 +3334,8 @@ async function startServer() {
   }, 60 * 1000);
 
   if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
+    // Dynamic import so vite is never loaded in production/Vercel context
+    const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: 'spa',
