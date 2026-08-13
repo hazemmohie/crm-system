@@ -170,82 +170,84 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
   };
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] bg-[#f7f4ed] flex items-center justify-center p-4 sm:p-6">
-      <div className="max-w-md w-full bg-[#fcfbfa] border border-[#ded5c5] rounded-3xl shadow-xl overflow-hidden p-6 sm:p-8 space-y-6 animate-in fade-in zoom-in-95 duration-200">
+    <div className="min-h-[calc(100vh-4rem)] bg-gradient-to-br from-[#0b0f19] via-[#151c2c] to-[#0b0f19] flex items-center justify-center p-4 sm:p-6">
+      <div className="max-w-md w-full bg-[#151c2c]/90 backdrop-blur-2xl border border-slate-800 rounded-3xl shadow-2xl overflow-hidden p-6 sm:p-8 space-y-6 animate-in fade-in zoom-in-95 duration-200">
         
         {/* Header Branding */}
         <div className="relative text-center space-y-3 pt-2">
           <button
             type="button"
             onClick={toggleLanguage}
-            className="absolute top-0 right-0 text-xs font-bold text-[#8c622b] bg-[#f2ece1] hover:bg-[#dfd7c7] border border-[#d8cebe] px-2.5 py-1 rounded-xl flex items-center gap-1 transition-all shadow-sm cursor-pointer"
+            className="absolute top-0 right-0 text-xs font-bold text-amber-300 bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 px-3 py-1 rounded-xl flex items-center gap-1.5 transition-all shadow-sm cursor-pointer"
             title={lang === 'ar' ? 'Switch to English' : 'التحويل للعربية'}
           >
             <Globe className="w-3.5 h-3.5" />
             <span>{lang === 'ar' ? 'English' : 'العربية'}</span>
           </button>
 
-          <div className="inline-flex p-4 bg-gradient-to-br from-[#8c622b] to-[#5c3e18] text-white border border-[#a8783b] rounded-2xl shadow-lg ring-4 ring-[#8c622b]/15">
-            <Building2 className="w-9 h-9 text-amber-100" />
+          <div className="inline-flex p-4 bg-gradient-to-br from-amber-600 via-amber-700 to-amber-900 text-white border border-amber-500/40 rounded-2xl shadow-lg ring-4 ring-amber-500/15">
+            <Building2 className="w-9 h-9 text-amber-200" />
           </div>
           <div>
-            <h1 className="text-2xl font-extrabold tracking-tight text-[#2c2824] font-serif">
+            <h1 className="text-2xl font-extrabold tracking-tight text-white font-serif tracking-wide">
               DeepRoots CRM Real Estate
             </h1>
-            <p className="text-[#6e685f] text-xs leading-relaxed font-medium mt-1">
+            <p className="text-slate-400 text-xs leading-relaxed font-medium mt-1">
               {lang === 'ar' ? 'منظومة إدارة وتتبع المبيعات والطلبات العقارية الذكية' : 'Smart Real Estate Lead & Sales Management System'}
             </p>
           </div>
         </div>
 
         {/* Tab Switcher */}
-        <div className="flex bg-[#f2ece1] p-1 rounded-2xl border border-[#d8cebe] gap-1">
+        <div className="flex bg-[#0b0f19] p-1 rounded-2xl border border-slate-800 gap-1">
           <button
             type="button"
             onClick={() => setActiveTab('login')}
-            className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1 ${
+            className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
               activeTab === 'login'
-                ? 'bg-[#8c622b] text-white shadow-sm'
-                : 'text-[#6e685f] hover:text-[#2c2824]'
+                ? 'bg-gradient-to-r from-amber-600 to-amber-700 text-white shadow-md'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
             }`}
           >
             <ShieldCheck className="w-3.5 h-3.5" />
-            <span>تسجيل الدخول</span>
+            <span>{lang === 'ar' ? 'تسجيل الدخول' : 'Sign In'}</span>
           </button>
           
           <button
             type="button"
             onClick={() => setActiveTab('client_request')}
-            className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1 ${
+            className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
               activeTab === 'client_request'
-                ? 'bg-[#8c622b] text-white shadow-sm'
-                : 'text-[#6e685f] hover:text-[#2c2824]'
+                ? 'bg-gradient-to-r from-amber-600 to-amber-700 text-white shadow-md'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
             }`}
           >
             <Building2 className="w-3.5 h-3.5" />
-            <span>تقديم طلب عقار</span>
+            <span>{lang === 'ar' ? 'تقديم طلب عقار' : 'Submit Request'}</span>
           </button>
 
           <button
             type="button"
             onClick={() => setActiveTab('register')}
-            className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1 ${
+            className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
               activeTab === 'register'
-                ? 'bg-[#8c622b] text-white shadow-sm'
-                : 'text-[#6e685f] hover:text-[#2c2824]'
+                ? 'bg-gradient-to-r from-amber-600 to-amber-700 text-white shadow-md'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
             }`}
           >
             <UserPlus className="w-3.5 h-3.5" />
-            <span>حساب جديد</span>
+            <span>{lang === 'ar' ? 'حساب جديد' : 'New Account'}</span>
           </button>
         </div>
 
         {/* User Code Highlight Banner */}
-        <div className="bg-[#f5efe4] border border-[#d8cebe] rounded-2xl p-3 flex items-start gap-2.5 text-xs text-[#554f47]">
-          <Tag className="w-4 h-4 text-[#8c622b] shrink-0 mt-0.5" />
+        <div className="bg-amber-950/30 border border-amber-700/40 rounded-2xl p-3 flex items-start gap-2.5 text-xs text-amber-200/90">
+          <Tag className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
           <div className="leading-relaxed">
-            <strong className="text-[#2c2824] block mb-0.5">أكواد تتبع الموظفين:</strong>
-            يُمنح كل مستخدم كوداً حركياً فريداً (مثال: <code className="bg-[#8c622b]/10 text-[#8c622b] font-mono px-1.5 py-0.5 rounded font-bold">EMP-001</code>) يربط كل تسجيلات العقارات والتواصل باسمه.
+            <strong className="text-amber-300 block mb-0.5">{lang === 'ar' ? 'أكواد تتبع الموظفين:' : 'Employee Tracking Codes:'}</strong>
+            {lang === 'ar' ? 'يُمنح كل مستخدم كوداً حركياً فريداً (مثال: ' : 'Each user receives a unique tracking code (e.g. '}
+            <code className="bg-amber-500/20 text-amber-300 font-mono px-1.5 py-0.5 rounded font-bold border border-amber-500/30">EMP-001</code>
+            {lang === 'ar' ? ') يربط كل تسجيلات العقارات والتواصل باسمه.' : ') linking all property records & communication.'}
           </div>
         </div>
 
@@ -261,40 +263,40 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
 
             <form onSubmit={handleSignIn} className="space-y-4">
               <div>
-                <label className="text-xs font-bold text-[#2c2824] block mb-1.5">
-                  اسم المستخدم / البريد الإلكتروني:
+                <label className="text-xs font-bold text-slate-300 block mb-1.5">
+                  {lang === 'ar' ? 'اسم المستخدم / البريد الإلكتروني:' : 'Username or Email:'}
                 </label>
                 <div className="relative">
-                  <User className="w-4 h-4 absolute right-3.5 top-3.5 text-[#8c8275]" />
+                  <User className="w-4 h-4 absolute right-3.5 top-3.5 text-slate-400" />
                   <input
                     type="text"
-                    placeholder="أدخل اسم المستخدم أو البريد"
+                    placeholder={lang === 'ar' ? 'أدخل اسم المستخدم أو البريد' : 'Enter username or email'}
                     value={usernameOrEmail}
                     onChange={(e) => setUsernameOrEmail(e.target.value)}
-                    className="w-full bg-[#f5efe4] border border-[#d8cebe] text-[#2c2824] text-xs font-semibold rounded-2xl p-3 pr-10 outline-none focus:border-[#8c622b] focus:bg-[#fcfbfa] transition-all dir-ltr text-right"
+                    className="w-full bg-[#0b0f19] border border-slate-700 text-white placeholder-slate-500 text-xs font-medium rounded-2xl p-3 pr-10 outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 transition-all dir-ltr text-right"
                     required
                   />
                 </div>
               </div>
 
               <div>
-                <label className="text-xs font-bold text-[#2c2824] block mb-1.5">
-                  كلمة المرور:
+                <label className="text-xs font-bold text-slate-300 block mb-1.5">
+                  {lang === 'ar' ? 'كلمة المرور:' : 'Password:'}
                 </label>
                 <div className="relative">
-                  <KeyRound className="w-4 h-4 absolute right-3.5 top-3.5 text-[#8c8275]" />
+                  <KeyRound className="w-4 h-4 absolute right-3.5 top-3.5 text-slate-400" />
                   <input
                     type={showPassword ? 'text' : 'password'}
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full bg-[#f5efe4] border border-[#d8cebe] text-[#2c2824] text-xs font-semibold rounded-2xl p-3 pr-10 pl-10 outline-none focus:border-[#8c622b] focus:bg-[#fcfbfa] transition-all dir-ltr text-right"
+                    className="w-full bg-[#0b0f19] border border-slate-700 text-white placeholder-slate-500 text-xs font-medium rounded-2xl p-3 pr-10 pl-10 outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 transition-all dir-ltr text-right"
                     required
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute left-3.5 top-3.5 text-[#8c8275] hover:text-[#2c2824] transition-colors cursor-pointer"
+                    className="absolute left-3.5 top-3.5 text-slate-400 hover:text-white transition-colors cursor-pointer"
                   >
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
@@ -304,17 +306,17 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
               <button
                 type="submit"
                 disabled={loginLoading}
-                className="w-full flex items-center justify-center gap-2 bg-[#8c622b] hover:bg-[#734f21] text-white border border-[#734f21] font-bold py-3.5 px-4 rounded-2xl shadow-md transition-all active:scale-[0.98] cursor-pointer disabled:opacity-50"
+                className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-amber-600 via-amber-700 to-amber-800 hover:from-amber-500 hover:to-amber-700 text-white border border-amber-500/40 font-bold py-3.5 px-4 rounded-2xl shadow-lg transition-all active:scale-[0.98] cursor-pointer disabled:opacity-50"
               >
                 {loginLoading ? (
                   <>
                     <RefreshCw className="w-4 h-4 animate-spin text-white" />
-                    <span className="text-xs font-bold">جاري التحقق والدخول...</span>
+                    <span className="text-xs font-bold">{lang === 'ar' ? 'جاري التحقق والدخول...' : 'Verifying credentials...'}</span>
                   </>
                 ) : (
                   <>
                     <ShieldCheck className="w-4 h-4" />
-                    <span className="text-xs font-bold">تسجيل الدخول للنظام</span>
+                    <span className="text-xs font-bold">{lang === 'ar' ? 'تسجيل الدخول للنظام' : 'Sign In to System'}</span>
                   </>
                 )}
               </button>

@@ -132,22 +132,22 @@ export const Navbar: React.FC<NavbarProps> = ({
   });
 
   return (
-    <header className="bg-[#f2ece1]/95 backdrop-blur-md border-b border-[#e2d8c7] text-[#2c2824] sticky top-0 z-40 shadow-sm">
+    <header className="bg-[#0b0f19]/95 backdrop-blur-xl border-b border-slate-800/80 text-slate-100 sticky top-0 z-40 shadow-xl">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         {/* Brand & Title */}
         <div className="flex items-center space-x-3 space-x-reverse">
-          <div className="p-2.5 bg-gradient-to-br from-[#8c622b] to-[#5c3e18] text-white rounded-xl shadow-md border border-[#a8783b] flex items-center justify-center">
-            <Building2 className="w-5 h-5 text-amber-100" />
+          <div className="p-2.5 bg-gradient-to-br from-amber-600 via-amber-700 to-amber-900 text-white rounded-xl shadow-lg ring-1 ring-amber-500/30 flex items-center justify-center">
+            <Building2 className="w-5 h-5 text-amber-200" />
           </div>
           <div>
-            <h1 className="text-base font-extrabold tracking-tight text-[#2c2824] flex items-center gap-2">
-              <span className="font-serif tracking-wide text-[#5c3e18]">DeepRoots CRM Real Estate</span>
-              <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-[#8c622b]/15 text-[#704d1f] font-bold border border-[#8c622b]/30">
-                منظومة العقارات
+            <h1 className="text-base font-extrabold tracking-tight text-white flex items-center gap-2">
+              <span className="font-serif tracking-wide text-amber-400">DeepRoots CRM Real Estate</span>
+              <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30">
+                {lang === 'ar' ? 'منظومة العقارات' : 'Real Estate System'}
               </span>
             </h1>
-            <p className="text-[11px] text-[#6e685f] font-medium">
-              توزيع وإدارة صفقات المبيعات والملاك بخصوصية كاملة
+            <p className="text-[11px] text-slate-400 font-medium">
+              {lang === 'ar' ? 'توزيع وإدارة صفقات المبيعات والملاك بخصوصية كاملة' : 'Sales pipeline & lead management system'}
             </p>
           </div>
         </div>
@@ -162,12 +162,12 @@ export const Navbar: React.FC<NavbarProps> = ({
                 onClick={() => setShowNotifications(!showNotifications)}
                 className={`relative p-2.5 rounded-xl border transition-all cursor-pointer flex items-center justify-center ${
                   showNotifications
-                    ? 'bg-[#8c622b] text-white border-[#8c622b] font-bold shadow-md'
+                    ? 'bg-amber-600 text-white border-amber-500 font-bold shadow-md'
                     : totalNotifCount > 0
-                    ? 'bg-[#eae3d5] text-[#704d1f] border-[#c8bba6] hover:bg-[#dfd7c7]'
-                    : 'bg-[#eae3d5] text-[#6e685f] border-[#d8cebe] hover:text-[#2c2824]'
+                    ? 'bg-amber-950/40 text-amber-300 border-amber-700/50 hover:bg-amber-900/40'
+                    : 'bg-slate-800/80 text-slate-300 border-slate-700 hover:text-white hover:border-slate-600'
                 }`}
-                title="تنبيهات مواعيد المتابعة والمهام"
+                title={lang === 'ar' ? 'تنبيهات مواعيد المتابعة والمهام' : 'Notifications'}
               >
                 <Bell className={`w-4 h-4 ${todayCount > 0 || unreadSystemNotifs.length > 0 ? 'animate-bounce text-[#8c622b]' : ''}`} />
                 
