@@ -293,9 +293,32 @@ function sanitizeAndEnsureDB(loaded: any): LocalDB {
   const isolatedUsers = loadUsersOnly();
   loaded.users = mergeUsers([loaded.users || [], isolatedUsers]);
 
-  // Keep all valid user accounts permanently - only filter out null or broken objects
-  loaded.users = loaded.users.filter((u: any) => u && (u.email || u.username || u.id));
-  loaded.customers = loaded.customers.filter((c: any) => c && !c.id.startsWith('cust-100'));
+  // Keep all valid real user accounts — filter out test/dummy accounts created during tests
+  loaded.users = loaded.users.filter((u: any) => {
+    if (!u || (!u.email && !u.username && !u.id)) return false;
+    const lowerUser = (u.username || '').toLowerCase();
+    const lowerEmail = (u.email || '').toLowerCase();
+    const lowerName = (u.name || '').toLowerCase();
+
+    const isTest = lowerUser.startsWith('test_') ||
+                   lowerUser.startsWith('testuser_') ||
+                   lowerUser.startsWith('testprod_') ||
+                   lowerUser.startsWith('testfinalcheck_') ||
+                   lowerEmail.startsWith('test_') ||
+                   lowerEmail.startsWith('testuser_') ||
+                   lowerName.includes('موظف تجريبي') ||
+                   lowerName.includes('test user') ||
+                   lowerName.includes('مستخدم تجريبي');
+    return !isTest;
+  });
+
+  loaded.customers = loaded.customers.filter((c: any) => {
+    if (!c || !c.id) return false;
+    if (c.id.startsWith('cust-100') || c.id.startsWith('demo-')) return false;
+    const lowerName = (c.name || '').toLowerCase();
+    if (lowerName.includes('تجريبي') || lowerName.includes('عميل وهمي') || lowerName.includes('اختبار')) return false;
+    return true;
+  });
 
   // Ensure explicit access rights and protection metadata for every customer
   loaded.customers.forEach((c: any) => {
