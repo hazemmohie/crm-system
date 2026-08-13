@@ -101,7 +101,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
           setRegError(data.error || 'حدث خطأ أثناء إنشاء الحساب الجديد');
         }
       } else {
-        setRegError(`خطأ من السيرفر (${res.status}): يرجى التأكد من رفع التعديلات وإضافة GOOGLE_SERVICE_ACCOUNT_JSON في Vercel`);
+        setRegError(`خطأ من السيرفر (${res.status}): حدث خطأ غير متوقع. يرجى المحاولة مرة أخرى أو التواصل مع المسؤول.`);
       }
     } catch (err: any) {
       setRegError('حدث خطأ بالاتصال بالسيرفر أثناء إنشاء الحساب. يرجى التأكد من تشغيل السيرفر والاتصال بالإنترنت.');

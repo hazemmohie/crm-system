@@ -3315,4 +3315,9 @@ if (!process.env.VERCEL) {
   startServer();
 }
 
+// ── Shared exports for api/index.ts ───────────────────────────────
+// Single source of truth: api/index.ts uses these directly so there
+// is only ONE in-memory db and ONE set of auth helpers.
+export { db, syncAndLoadData, saveDB, hashPassword, verifyPassword };
+
 export default app;
