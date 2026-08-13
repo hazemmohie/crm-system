@@ -233,13 +233,9 @@ app.post('/api/auth/register', async (req: Request, res: Response) => {
   }
 });
 
-// ── Forward all other /api/* to the main server.ts express app ─────
-import mainApp from '../server.js';
-app.use('/api', mainApp);
-
-// ── 404 fallback ───────────────────────────────────────────────────
-app.use('/api/*', (_req: Request, res: Response) => {
-  res.status(404).json({ error: 'الرابط غير موجود.' });
+// ── 404 fallback for unmatched API routes ────────────────────────
+app.use('*', (_req: Request, res: Response) => {
+  res.status(404).json({ error: 'الرابط غير موجود في API.' });
 });
 
 export default app;
