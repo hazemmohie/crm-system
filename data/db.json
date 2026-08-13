@@ -82,6 +82,23 @@
       "dailyQuota": 15,
       "dailyLeadQuota": 10,
       "dailyOwnerQuota": 5
+    },
+    {
+      "id": "user-1786579477528-lo6o",
+      "email": "testuser_1786579477522@system.local",
+      "username": "testuser_1786579477522",
+      "userCode": "EMP-104",
+      "password": "pbkdf2$72419b23b691ebced67ba857d691746fab4d611b4792fad1605b60815717af40",
+      "name": "Test User",
+      "phone": "01000000001",
+      "role": "user",
+      "status": "pending",
+      "createdAt": "2026-08-13T00:04:37.530Z",
+      "agreedToTerms": true,
+      "agreedAt": "2026-08-13T00:04:37.530Z",
+      "dailyQuota": 15,
+      "dailyLeadQuota": 10,
+      "dailyOwnerQuota": 5
     }
   ],
   "customers": [],
