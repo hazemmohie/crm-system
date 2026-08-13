@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { User, Customer } from '../types';
-import { Users, LogOut, CheckCircle2, ShieldCheck, Building2, UserPlus, BookOpen, Bell, Calendar, Clock, AlertCircle, MessageSquare, Phone, ExternalLink, X } from 'lucide-react';
+import { Users, LogOut, CheckCircle2, ShieldCheck, Building2, UserPlus, BookOpen, Bell, Calendar, Clock, AlertCircle, MessageSquare, Phone, ExternalLink, X, Globe } from 'lucide-react';
 import { formatWhatsAppPhone, formatDisplayPhone, maskPhoneNumber } from '../utils/phoneUtils';
+import { getStoredLanguage, setStoredLanguage, translations, Language } from '../utils/i18n';
 
 interface NavbarProps {
   currentUser: User | null;
@@ -25,7 +26,16 @@ export const Navbar: React.FC<NavbarProps> = ({
   const [showNotifications, setShowNotifications] = useState(false);
   const [activeNotifTab, setActiveNotifTab] = useState<'all' | 'today' | 'tasks' | 'overdue'>('all');
   const [systemNotifs, setSystemNotifs] = useState<any[]>([]);
+  const [lang, setLangState] = useState<Language>(getStoredLanguage());
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const t = translations[lang];
+
+  const toggleLanguage = () => {
+    const nextLang = lang === 'ar' ? 'en' : 'ar';
+    setLangState(nextLang);
+    setStoredLanguage(nextLang);
+  };
 
   const isAdmin = currentUser?.role === 'admin';
 
@@ -343,15 +353,25 @@ export const Navbar: React.FC<NavbarProps> = ({
               )}
             </div>
 
+            {/* Language Switcher */}
+            <button
+              onClick={toggleLanguage}
+              className="flex items-center gap-1.5 bg-[#eae3d5] hover:bg-[#dfd7c7] text-[#2c2824] border border-[#d8cebe] px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-sm"
+              title={lang === 'ar' ? 'Switch to English' : 'التحويل للعربية'}
+            >
+              <Globe className="w-3.5 h-3.5 text-[#8c622b]" />
+              <span>{lang === 'ar' ? 'EN' : 'عربي'}</span>
+            </button>
+
             {/* Client Requests Exchange Button */}
             {onOpenClientRequests && (
               <button
                 onClick={onOpenClientRequests}
                 className="flex items-center gap-1.5 bg-[#8c622b] hover:bg-[#704d1f] text-white border border-[#704d1f] px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer"
-                title="سوق طلبات العملاء المشتركة لمطابقة العروض مع الطلبات"
+                title={lang === 'ar' ? 'سوق طلبات العملاء المشتركة لمطابقة العروض مع الطلبات' : 'Shared Requests Market'}
               >
                 <Building2 className="w-3.5 h-3.5" />
-                <span className="hidden md:inline">سوق الطلبات المشتركة 🏢</span>
+                <span className="hidden md:inline">{t.sharedExchange}</span>
               </button>
             )}
 
@@ -361,7 +381,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               className="flex items-center gap-1.5 bg-[#eae3d5] hover:bg-[#dfd7c7] text-[#2c2824] border border-[#d8cebe] px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer"
             >
               <BookOpen className="w-3.5 h-3.5 text-[#8c622b]" />
-              <span className="hidden sm:inline">دليل النظام</span>
+              <span className="hidden sm:inline">{t.guide}</span>
             </button>
 
             {/* Current Account Card */}

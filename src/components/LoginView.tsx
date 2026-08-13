@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Building2, KeyRound, User, AlertCircle, RefreshCw, Eye, EyeOff, ShieldCheck, Tag, Info, UserPlus, CheckCircle2 } from 'lucide-react';
+import { Building2, KeyRound, User, AlertCircle, RefreshCw, Eye, EyeOff, ShieldCheck, Tag, Info, UserPlus, CheckCircle2, Globe } from 'lucide-react';
+import { getStoredLanguage, setStoredLanguage, translations, Language } from '../utils/i18n';
 
 interface LoginViewProps {
   onLogin: (usernameOrEmail: string, password?: string) => Promise<{ success: boolean; error?: string } | void>;
@@ -7,6 +8,15 @@ interface LoginViewProps {
 
 export const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
   const [activeTab, setActiveTab] = useState<'login' | 'register' | 'client_request'>('login');
+  const [lang, setLangState] = useState<Language>(getStoredLanguage());
+
+  const t = translations[lang];
+
+  const toggleLanguage = () => {
+    const nextLang = lang === 'ar' ? 'en' : 'ar';
+    setLangState(nextLang);
+    setStoredLanguage(nextLang);
+  };
   
   // Login State
   const [usernameOrEmail, setUsernameOrEmail] = useState('');
@@ -164,7 +174,17 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
       <div className="max-w-md w-full bg-[#fcfbfa] border border-[#ded5c5] rounded-3xl shadow-xl overflow-hidden p-6 sm:p-8 space-y-6 animate-in fade-in zoom-in-95 duration-200">
         
         {/* Header Branding */}
-        <div className="text-center space-y-3">
+        <div className="relative text-center space-y-3 pt-2">
+          <button
+            type="button"
+            onClick={toggleLanguage}
+            className="absolute top-0 right-0 text-xs font-bold text-[#8c622b] bg-[#f2ece1] hover:bg-[#dfd7c7] border border-[#d8cebe] px-2.5 py-1 rounded-xl flex items-center gap-1 transition-all shadow-sm cursor-pointer"
+            title={lang === 'ar' ? 'Switch to English' : 'التحويل للعربية'}
+          >
+            <Globe className="w-3.5 h-3.5" />
+            <span>{lang === 'ar' ? 'English' : 'العربية'}</span>
+          </button>
+
           <div className="inline-flex p-4 bg-gradient-to-br from-[#8c622b] to-[#5c3e18] text-white border border-[#a8783b] rounded-2xl shadow-lg ring-4 ring-[#8c622b]/15">
             <Building2 className="w-9 h-9 text-amber-100" />
           </div>
@@ -173,7 +193,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
               DeepRoots CRM Real Estate
             </h1>
             <p className="text-[#6e685f] text-xs leading-relaxed font-medium mt-1">
-              منظومة إدارة وتتبع المبيعات والطلبات العقارية الذكية
+              {lang === 'ar' ? 'منظومة إدارة وتتبع المبيعات والطلبات العقارية الذكية' : 'Smart Real Estate Lead & Sales Management System'}
             </p>
           </div>
         </div>

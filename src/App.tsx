@@ -8,6 +8,7 @@ import { UserDashboard } from './components/UserDashboard';
 import { TermsAgreementModal } from './components/TermsAgreementModal';
 import { UserGuideModal } from './components/UserGuideModal';
 import { ClientRequestsExchange } from './components/ClientRequestsExchange';
+import { getStoredLanguage } from './utils/i18n';
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -97,6 +98,10 @@ export default function App() {
   };
 
   useEffect(() => {
+    const currentLang = getStoredLanguage();
+    document.documentElement.lang = currentLang;
+    document.documentElement.dir = currentLang === 'ar' ? 'rtl' : 'ltr';
+
     const savedEmail = localStorage.getItem('app_user_email');
     if (savedEmail) {
       restoreSession(savedEmail);
